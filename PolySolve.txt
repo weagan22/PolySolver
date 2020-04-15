@@ -1,0 +1,113 @@
+Option Explicit
+
+Sub polySolve()
+    
+    'Enter the row where your values start
+    Dim rowVal As Integer
+    rowVal = 1
+    
+    'Enter the column your values are in numerically (A=1, B=2, C=3 ...etc.)
+    Dim colVal As Integer
+    colVal = 1
+    
+    'Tolerance for convergence
+    Dim convergenceTol As Double
+    convergenceTol = 0.0000000001
+    
+    'Max number of iterations to complete before finding failed convergence
+    Dim interationMax As Double
+    interationMax = 1000
+    
+    'Enter the coefficients of your polynomial into array C(). y = C(n)*X^n +...+ C(3)*X^3 + C(2)*X^2 +C(1)*X + C(0)
+    Dim C(10) As Double
+    C(0) = 0
+    C(1) = 0.1 '2.5949192 * 10 ^ 1
+    C(2) = 0.1 '-2.1316967 * 10 ^ -1
+    C(3) = 0.2 '7.9018692 * 10 ^ -1
+    C(4) = 0.56 '4.2527777 * 10 ^ -1
+    C(5) = 0.25 '1.3304473 * 10 ^ -1
+    C(6) = 0 '2.0241446 * 10 ^ -2
+    C(7) = 0 '1.2668171 * 10 ^ -3
+    C(8) = 0
+    C(9) = 0
+    C(10) = 0
+    
+    Dim inputCol As Integer
+    inputCol = colVal + 1 'Set the input column one to the right of the input values
+    
+    'Check to see if the column to the right is empty otherwise move the input column over to the first empty cell to the right
+    Do While Cells(rowVal, inputCol).Value <> ""
+        inputCol = inputCol + 1
+        If inputCol > 1000 Then
+            MsgBox "Error finding column to input values into.", , "Error"
+            Exit Sub
+        End If
+    Loop
+    
+    Dim C0_start As Double
+    C0_start = C(0) 'Store C0 start value so that it can be reset for each search value
+    
+    Dim z As Integer
+    z = rowVal
+    Do While Excel.Cells(z, colVal).Value <> "" 'Keep looping until there is a cell in your search column that is blank
+        If IsNumeric(Cells(z, colVal).Value) Then 'Check if input value is numeric prior to attempting to calculate from it
+            Dim inValue As Double
+            inValue = Cells(z, colVal).Value
+            
+            C(0) = C0_start - inValue 'Set polynomial equal to 0 by subtracting the desired search value from it
+            
+            'Guess that the input value is 0 and work for there (you could use a better method to guess if one is available)
+            Dim foundValue As Double
+            foundValue = 0
+            
+            Dim newValue As Double
+            newValue = 0
+            Dim i As Integer
+            For i = 1 To interationMax 'Iterate this number of times before throwing convergence error
+                newValue = foundValue - (polyFunc(foundValue, C) / derivativeFunc(foundValue, C)) 'Take one Newtonian step and then check for convergence
+
+                If i > 1 Then 'If not the first loop through check for convergence
+                    If Abs(newValue - foundValue) < convergenceTol Then 'If value is lower than convergence value then set found value and exit loop.
+                        foundValue = newValue
+                        Exit For
+                    End If
+                End If
+                
+                foundValue = newValue 'Set found value to new value and iterate through again
+            Next
+
+            'Check for convergence error otherwise output value to input column
+            If i > interationMax Then
+                Cells(z, inputCol).Value = "ERROR - Convergence"
+            Else
+                Cells(z, inputCol).Value = foundValue
+            End If
+        Else
+            Cells(z, inputCol).Value = "ERROR - Non-Numeric Input"
+        End If
+        
+        z = z + 1
+    Loop
+End Sub
+    
+Function derivativeFunc(inVal As Double, C() As Double) As Double
+    Dim retVal As Double
+    
+    Dim i As Integer
+    For i = 1 To UBound(C)
+        retVal = retVal + i * C(i) * inVal ^ (i - 1)
+    Next
+    
+    derivativeFunc = retVal
+End Function
+
+Function polyFunc(inVal As Double, C() As Double) As Double
+    Dim retVal As Double
+        
+    Dim i As Integer
+    For i = 0 To UBound(C)
+        retVal = retVal + C(i) * inVal ^ i
+    Next
+    
+    polyFunc = retVal
+End Function
